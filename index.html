@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Schema to SQL Converter</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            font-weight: 300;
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .main-content {
+            padding: 40px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+                gap: 30px;
+                padding: 20px;
+            }
+        }
+
+        .section {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(0, 0, 0, 0.05);
+        }
+
+        .section h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+            font-weight: 500;
+        }
+
+        .upload-area {
+            border: 3px dashed #4facfe;
+            border-radius: 10px;
+            padding: 40px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 20px;
+            background: rgba(79, 172, 254, 0.05);
+        }
+
+        .upload-area:hover {
+            border-color: #00f2fe;
+            background: rgba(79, 172, 254, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .upload-area.dragover {
+            border-color: #00f2fe;
+            background: rgba(79, 172, 254, 0.2);
+        }
+
+        .upload-icon {
+            font-size: 3em;
+            color: #4facfe;
+            margin-bottom: 15px;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(79, 172, 254, 0.3);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 500;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e1e5e9;
+            border-radius: 8px;
+            font-size: 1em;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: #4facfe;
+            box-shadow: 0 0 0 3px rgba(79, 172, 254, 0.1);
+        }
+
+        textarea.form-control {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .result-box {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 20px;
+            font-family: 'Courier New', monospace;
+            white-space: pre-wrap;
+            word-break: break-word;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .success {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            color: white;
+        }
+
+        .error {
+            background: linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%);
+            color: white;
+        }
+
+        .user-id-display {
+            background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+            border: none;
+            color: #8b4513;
+            font-weight: bold;
+            font-size: 1.1em;
+            text-align: center;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+            margin-right: 10px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .matched-chunks {
+            margin-top: 15px;
+        }
+
+        .chunk {
+            background: rgba(79, 172, 254, 0.1);
+            border-left: 4px solid #4facfe;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            font-size: 0.9em;
+        }
+
+        .sql-query {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 20px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            margin-top: 15px;
+            position: relative;
+        }
+
+        .copy-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.8em;
+        }
+
+        .copy-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+
+        .status-ready { background: #38ef7d; }
+        .status-processing { background: #ffc107; }
+        .status-error { background: #ff4b2b; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🗄️ Schema to SQL Converter</h1>
+            <p>Upload your database schema and convert natural language to SQL queries</p>
+        </div>
+
+        <div class="main-content">
+            <!-- Upload Section -->
+            <div class="section">
+                <h2>📤 Upload Database Schema</h2>
+                
+                <div class="upload-area" id="uploadArea">
+                    <div class="upload-icon">📄</div>
+                    <p><strong>Drop your DOCX file here</strong></p>
+                    <p>or click to browse</p>
+                    <input type="file" id="fileInput" class="file-input" accept=".docx">
+                </div>
+
+                <button class="btn" id="uploadBtn" onclick="uploadFile()" disabled>
+                    <span id="uploadBtnText">Select a file first</span>
+                </button>
+
+                <div id="uploadResult" class="result-box" style="display: none;"></div>
+            </div>
+
+            <!-- Query Section -->
+            <div class="section">
+                <h2>🔍 Convert Query to SQL</h2>
+                
+                <div class="form-group">
+                    <label for="userId">User ID</label>
+                    <input type="text" id="userId" class="form-control" 
+                           placeholder="Enter your unique user ID">
+                </div>
+
+                <div class="form-group">
+                    <label for="naturalQuery">Natural Language Query</label>
+                    <textarea id="naturalQuery" class="form-control" 
+                              placeholder="e.g., Show me all users with age greater than 25"></textarea>
+                </div>
+
+                <button class="btn" id="queryBtn" onclick="processQuery()">
+                    <span id="queryBtnText">Convert to SQL</span>
+                </button>
+
+                <div id="queryResult" class="result-box" style="display: none;"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE_URL = 'http://localhost:8000';
+        let selectedFile = null;
+
+        // File upload handling
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const uploadBtn = document.getElementById('uploadBtn');
+
+        uploadArea.addEventListener('click', () => fileInput.click());
+        uploadArea.addEventListener('dragover', handleDragOver);
+        uploadArea.addEventListener('dragleave', handleDragLeave);
+        uploadArea.addEventListener('drop', handleDrop);
+        fileInput.addEventListener('change', handleFileSelect);
+
+        function handleDragOver(e) {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        }
+
+        function handleDragLeave(e) {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+        }
+
+        function handleDrop(e) {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFileSelect({ target: { files } });
+            }
+        }
+
+        function handleFileSelect(e) {
+            const file = e.target.files[0];
+            if (file && file.name.endsWith('.docx')) {
+                selectedFile = file;
+                uploadArea.innerHTML = `
+                    <div class="upload-icon">✅</div>
+                    <p><strong>${file.name}</strong></p>
+                    <p>Ready to upload</p>
+                `;
+                uploadBtn.disabled = false;
+                document.getElementById('uploadBtnText').textContent = 'Upload Schema';
+            } else {
+                alert('Please select a valid DOCX file');
+                resetUploadArea();
+            }
+        }
+
+        function resetUploadArea() {
+            selectedFile = null;
+            uploadArea.innerHTML = `
+                <div class="upload-icon">📄</div>
+                <p><strong>Drop your DOCX file here</strong></p>
+                <p>or click to browse</p>
+            `;
+            uploadBtn.disabled = true;
+            document.getElementById('uploadBtnText').textContent = 'Select a file first';
+        }
+
+        async function uploadFile() {
+            if (!selectedFile) return;
+
+            const uploadBtn = document.getElementById('uploadBtn');
+            const uploadBtnText = document.getElementById('uploadBtnText');
+            const uploadResult = document.getElementById('uploadResult');
+
+            // Show loading state
+            uploadBtn.disabled = true;
+            uploadBtnText.innerHTML = '<span class="loading"></span>Uploading...';
+
+            try {
+                const formData = new FormData();
+                formData.append('file', selectedFile);
+
+                const response = await fetch(`${API_BASE_URL}/upload-schema`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    uploadResult.className = 'result-box success';
+                    uploadResult.innerHTML = `
+                        <strong>✅ Upload Successful!</strong><br>
+                        <strong>Your User ID:</strong><br>
+                        <div class="user-id-display">${data.user_id}</div><br>
+                        <strong>Chunks processed:</strong> ${data.chunks_count}<br>
+                        <em>Save this User ID to make queries!</em>
+                    `;
+                    
+                    // Auto-fill user ID in query section
+                    document.getElementById('userId').value = data.user_id;
+                    
+                    // Reset upload area
+                    resetUploadArea();
+                } else {
+                    throw new Error(data.detail || 'Upload failed');
+                }
+            } catch (error) {
+                uploadResult.className = 'result-box error';
+                uploadResult.innerHTML = `
+                    <strong>❌ Upload Failed</strong><br>
+                    ${error.message}
+                `;
+                uploadBtn.disabled = false;
+                uploadBtnText.textContent = 'Upload Schema';
+            }
+
+            uploadResult.style.display = 'block';
+        }
+
+        async function processQuery() {
+            const userId = document.getElementById('userId').value.trim();
+            const naturalQuery = document.getElementById('naturalQuery').value.trim();
+            const queryBtn = document.getElementById('queryBtn');
+            const queryBtnText = document.getElementById('queryBtnText');
+            const queryResult = document.getElementById('queryResult');
+
+            if (!userId || !naturalQuery) {
+                alert('Please enter both User ID and your query');
+                return;
+            }
+
+            // Show loading state
+            queryBtn.disabled = true;
+            queryBtnText.innerHTML = '<span class="loading"></span>Processing...';
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/query`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        user_id: userId,
+                        query: naturalQuery
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    queryResult.className = 'result-box success';
+                    queryResult.innerHTML = `
+                        <strong>✅ Query Processed Successfully!</strong>
+                        
+                        <div class="sql-query">
+                            <button class="copy-btn" onclick="copyToClipboard('${data.sql_query.replace(/'/g, "\\'")}')">Copy</button>
+                            <strong>SQL Query:</strong><br>
+                            ${data.sql_query}
+                        </div>
+
+                        <div class="matched-chunks">
+                            <strong>📋 Matched Schema Information (${data.matched_chunks.length} chunks):</strong>
+                            ${data.matched_chunks.map((chunk, index) => 
+                                `<div class="chunk"><strong>Chunk ${index + 1}:</strong><br>${chunk.substring(0, 200)}${chunk.length > 200 ? '...' : ''}</div>`
+                            ).join('')}
+                        </div>
+                    `;
+                } else {
+                    throw new Error(data.detail || 'Query processing failed');
+                }
+            } catch (error) {
+                queryResult.className = 'result-box error';
+                queryResult.innerHTML = `
+                    <strong>❌ Query Processing Failed</strong><br>
+                    ${error.message}
+                `;
+            }
+
+            queryResult.style.display = 'block';
+            queryBtn.disabled = false;
+            queryBtnText.textContent = 'Convert to SQL';
+        }
+
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                // Show temporary feedback
+                const btn = event.target;
+                const originalText = btn.textContent;
+                btn.textContent = 'Copied!';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                }, 2000);
+            });
+        }
+
+        // Auto-resize textarea
+        document.getElementById('naturalQuery').addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = Math.max(100, this.scrollHeight) + 'px';
+        });
+    </script>
+</body>
+</html>
