@@ -149,3 +149,7 @@ Once running, visit `http://localhost:8000/docs` for interactive API documentati
 - Each user gets a unique ID that maps to their schema data
 - Schema chunks are embedded and stored for efficient similarity search
 - The system uses in-memory processing with file-based persistence
+
+
+
+groq - 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
