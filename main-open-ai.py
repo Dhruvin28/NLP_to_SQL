@@ -28,7 +28,7 @@ app.add_middleware(
 
 # Initialize models
 embedding_model = SentenceTransformer('all-MiniLM-L6-v2')  # Open source embedding model
-groq_client = groq.Groq(api_key="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")  # Replace with your Groq API key
+groq_client = groq.Groq(api_key="replace from readme")  # Replace with your Groq API key
 
 # Configuration
 STORAGE_DIR = Path("storage")
